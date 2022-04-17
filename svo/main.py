@@ -4,7 +4,7 @@ import cv2
 data_dir = "/mav0/cam0/data"
 
 def run():
-    cur_dir = Path.cwd()
+    cur_dir = Path(__name__)
     data_dir = cur_dir.parent / "mav0/cam0/data"
     
     for filename in sorted(data_dir.glob("*")):
