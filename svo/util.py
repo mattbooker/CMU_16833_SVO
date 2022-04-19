@@ -15,10 +15,12 @@ def gray2RGB(image):
 def RGB2Gray(image):
     return cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
 
-def debug_bins(image, horizontal_bins, vertical_bins, width, height, draw_output = False):
+def debug_bins(image, horizontal_bins, vertical_bins, width, height, draw_output = False, print_bins = False):
+    if print_bins:
+        print(f'{horizontal_bins.shape=},{horizontal_bins=}')
+        print(f'{vertical_bins.shape=}, {vertical_bins=}')
+
     # Coordinates must be a tuple - (x,y)
-    print(f'{horizontal_bins.shape=},{horizontal_bins=}')
-    print(f'{vertical_bins.shape=}, {vertical_bins=}')
     if draw_output:
         for hor in horizontal_bins:
             cv2.line(image,(0, hor),(width, hor),(0,0,255),thickness=1) #Color is by default black

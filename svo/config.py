@@ -4,3 +4,8 @@ class Config:
     
     class Matcher:
         window_size = 15
+
+    class FeatureDetector:
+        BINS = 10
+        NON_MAX_SUPPRESSION = True
+        THRESHOLD = 5
