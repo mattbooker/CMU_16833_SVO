@@ -1,11 +1,10 @@
 import numpy as np
 
-frame_number = 0
-
 class Frame:
+    frame_number = 0
 
     def __init__(self, image):
-        self.id = frame_number
+        self.id = Frame.frame_number
         self.image_ = image
         self.keypoints_ = None
         self.kp_scores_ = None
@@ -14,7 +13,7 @@ class Frame:
         # Transform from world to frame
         self.T_w_f_ = np.eye(4)
 
-        frame_number += 1
+        Frame.frame_number += 1
 
     def setKeypoints(self, keypoints, scores):
         self.keypoints_ = keypoints
