@@ -7,7 +7,6 @@ class Frame:
         self.id = Frame.frame_number
         self.image_ = image
         self.keypoints_ = None
-        self.kp_scores_ = None
         self.is_keyframe_ = False
 
         # Transform from world to frame
@@ -18,4 +17,3 @@ class Frame:
     def setKeypoints(self, keypoints, scores):
         self.keypoints_ = keypoints
         self.scores = scores
-

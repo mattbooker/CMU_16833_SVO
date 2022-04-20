@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
 
-from util import createBins, load_image, debug_bins, gray2RGB
+from util import createBins, load_image, debug_bins, gray2RGB, save_image
 
 from frame import Frame
 from config import Config
+
 
 class FeatureDetector:
     def __init__(self, width, height):
@@ -12,7 +13,9 @@ class FeatureDetector:
         self.fast.setNonmaxSuppression(Config.FeatureDetector.NON_MAX_SUPPRESSION)
         self.fast.setThreshold(Config.FeatureDetector.THRESHOLD)
 
-        self.col_bins, self.row_bins = createBins(width, height, number_of_bins=Config.FeatureDetector.BINS)
+        self.col_bins, self.row_bins = createBins(
+            width, height, number_of_bins=Config.FeatureDetector.BINS
+        )
 
     def cv_kpts_to_np_kp_and_scores(self, keypoints):
         kpts_np = np.array([kp.pt for kp in keypoints])
@@ -20,8 +23,11 @@ class FeatureDetector:
         return kpts_np, kpts_scores
 
     def detectKeypoints(self, frame):
-        kps = []
-        kps_scores = []
+        kps_list = []
+        kps_scores_list = []
+
+        keypoints = self.fast.detect(frame.image_)
+        np_kps, np_kps_scores = self.cv_kpts_to_np_kp_and_scores(keypoints)
 
         # TODO Optimize (since bins are precalculated)
         for i_r in range(self.row_bins.shape[0] - 1):
@@ -32,42 +38,50 @@ class FeatureDetector:
                 start_col = self.col_bins[i_c]
                 end_col = self.col_bins[i_c + 1]
 
-                img_patch = frame.image_[start_row:end_row, start_col:end_col]
-                img_patch_kp_pts = self.fast.detect(img_patch)
+                row_indexes = (np_kps[:, 0] >= start_row) & (np_kps[:, 0] < end_row)
+                col_indexes = (np_kps[:, 1] >= start_col) & (np_kps[:, 1] < end_col)
 
-                if img_patch_kp_pts:
-                    kpts_np, kpts_scores = self.cv_kpts_to_np_kp_and_scores(img_patch_kp_pts)
-                    highest_score_index = np.argmax(kpts_scores)
-                    kp = kpts_np[highest_score_index]
-                    kp[1] += start_row
-                    kp[0] += start_col
+                max_index = np.argmax(np_kps_scores[row_indexes & col_indexes])
 
-                    kps.append(kp)
-                    kps_scores.append(kpts_scores[highest_score_index])
+                max_kp = np_kps[row_indexes & col_indexes][max_index]
+                max_kp_score = np_kps_scores[row_indexes & col_indexes][max_index]
 
-        frame.keypoints_ = kps
-        frame.kp_scores_ = kps_scores
+                kps_list.append(max_kp)
+                kps_scores_list.append(max_kp_score)
+
+        frame.keypoints_ = kps_list
+        frame.kp_scores_ = kps_scores_list
 
     def drawKeypoints(self, frame):
         debug_img = gray2RGB(frame.image_.copy())
-        
+
         for kp in frame.keypoints_:
-            cv2.circle(debug_img, kp.astype(int), radius=2, color=(0, 255, 0), thickness=1)
+            cv2.circle(
+                debug_img, kp.astype(int), radius=2, color=(0, 255, 0), thickness=1
+            )
 
             strt = kp.astype(int) - 5
-            end = kp.astype(int)  + 5
+            end = kp.astype(int) + 5
 
             cv2.line(debug_img, strt, end, color=(0, 255, 0), thickness=2)
-            cv2.line(debug_img, (end[0], strt[1]), (strt[0], end[1]), color=(0, 255, 0), thickness=2)
+            cv2.line(
+                debug_img,
+                (end[0], strt[1]),
+                (strt[0], end[1]),
+                color=(0, 255, 0),
+                thickness=2,
+            )
 
-        debug_bins(debug_img, self.col_bins, self.row_bins, width, height, draw_output=True)
+        debug_bins(
+            debug_img, self.col_bins, self.row_bins, width, height, draw_output=True
+        )
 
         return debug_img
-    
+
 
 if __name__ == "__main__":
     image_path = "lena.jpg"
-    image = load_image(path = image_path)
+    image = load_image(path=image_path)
     width, height = image.shape
     frame = Frame(image)
 
@@ -75,7 +89,6 @@ if __name__ == "__main__":
     fd.detectKeypoints(frame)
     debug_img = fd.drawKeypoints(frame)
 
-    cv2.imshow("features_binned", debug_img)
-
+    cv2.imshow("features", debug_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
