@@ -13,15 +13,39 @@ class Camera:
 
         # Reshape and drop the last row
         # self.extrinsics = np.array(self.data['T_BS']['data']).reshape((ext_cols, ext_rows))[:-1,:]
-        self.extrinsics = np.hstack([np.eye(3), np.zeros((3,1))])
+        # self.extrinsics = np.hstack([np.eye(3), np.zeros((3,1))])
+
+        # self.R = self.extrinsics[:3, :3]
+        # self.t = self.extrinsics[:, -1].reshape((3,1))
         
         self.intrinsics = np.eye(3)
         self.intrinsics[[0, 1, 0, 1], [0, 1, 2, 2]] = np.array(self.data['intrinsics'])
         
-        self.P = self.intrinsics @ self.extrinsics
+        # self.P = self.intrinsics @ self.extrinsics
 
-import pathlib
-a = pathlib.Path(__name__)
-b = a.parent / "mav0/cam0/sensor.yaml"
+    # Project world point into image to get pixel coordinates
+    def project(self, transform, world_pt):
+        homogeneous_world_pt = np.vstack([world_pt, 1])
+
+        homogeneous_image_pt = self.intrinsics @ transform @ homogeneous_world_pt
+        image_pt = homogeneous_image_pt[:-1] / homogeneous_image_pt[-1]
+
+        return image_pt
+        
+    # Back project pixel coordinates to a world point at given depth
+    def back_projection(self, transform, image_pt, depth):
+        R = transform[:3, :3]
+        t = transform[:, -1].reshape((3,1))
+        homogeneous_image_pt = np.vstack([image_pt, 1])
+
+        return depth * R.T @ np.linalg.inv(self.intrinsics) @ homogeneous_image_pt - R.T @ t
+
+
+
+from pathlib import Path
+b = Path(__name__).parent / "mav0/cam0/sensor.yaml"
 
 test = Camera(str(b))
+p = np.array([[367.215], [248.375]])
+
+print(test.back_projection(p, 5.5))
