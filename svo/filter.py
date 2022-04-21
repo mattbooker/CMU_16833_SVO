@@ -3,13 +3,15 @@ from scipy.stats import norm
 
 class Filter:
 
-    def __init__(self, mean, min, max):
+    def __init__(self, mean, min, max, id):
         self.mean = 1/mean
         self.min = 1/min
         self.max = 1/max
         self.variance = np.power(self.min, 2) / 36
         self.a = 10
         self.b = 10
+        self.ref_keyframe = id # keyframe id that the filter is associated to
+        self.feature_point = np.zeros((1, 2)) # image point in the keyframe that the filter is associated to
 
     def update(self, estimated_depth, tau_sq):
 
