@@ -1,9 +1,9 @@
+import numpy as np
 from filter import Filter
 
 class DepthFilter:
 
-    def __init__(self, map):
-        self.ref_keyframe = 0
+    def __init__(self):
         self.filters = []
 
     def processFrame(self, frame):
@@ -13,10 +13,10 @@ class DepthFilter:
         #     self.addKeyFrame(frame)
         pass
 
-    def addKeyFrame(self, frame, avg_depth, min_depth, max_depth):
+    def addKeyFrame(self, frame, map, avg_depth, min_depth, max_depth):
         # For each NEW feature (i.e those not matched to map):
         #   create new filter
-        pass
+        f = Filter(map.avg_scene_depth, np.min(map.points[:, -1]), np.max(map.points[:, -1]), frame.id)
 
     def updateFilters(self, frame):
         # For each filter currently stored:
