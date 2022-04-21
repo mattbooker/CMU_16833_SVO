@@ -1,7 +1,10 @@
+from filter import Filter
+
 class DepthFilter:
 
-    def __init__(self):
-        pass
+    def __init__(self, map):
+        self.ref_keyframe = 0
+        self.filters = []
 
     def processFrame(self, frame):
         # self.updateFilters(frame)
