@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from util import createBins, load_image, debug_bins, gray2RGB, save_image, RGB2Gray
+from util import createBins, loadImage, debugBins, gray2RGB, saveImage, RGB2Gray
 
 from frame import Frame
 from config import Config
@@ -16,8 +16,8 @@ class FeatureDetector:
         self.col_bins, self.row_bins = createBins(
             width, height, number_of_bins=Config.FeatureDetector.BINS
         )
-
-    def cv_kpts_to_np_kp_and_scores(self, keypoints):
+        
+    def cvKeyPointsToNPArray(self, keypoints):
         kpts_np = np.array([kp.pt for kp in keypoints])
         kpts_scores = np.array([kp.response for kp in keypoints])
         return kpts_np, kpts_scores
@@ -27,7 +27,7 @@ class FeatureDetector:
         kps_scores_list = []
 
         keypoints = self.fast.detect(frame.image_)
-        np_kps, np_kps_scores = self.cv_kpts_to_np_kp_and_scores(keypoints)
+        np_kps, np_kps_scores = self.cvKeyPointsToNPArray(keypoints)
 
         # TODO Optimize (since bins are precalculated)
         for i_r in range(self.row_bins.shape[0] - 1):
@@ -45,25 +45,22 @@ class FeatureDetector:
                 if np.any(index):
                     max_index = np.argmax(np_kps_scores[index])
 
-                    max_kp = np_kps[row_indexes & col_indexes][max_index]
-                    max_kp_score = np_kps_scores[row_indexes & col_indexes][max_index]
-
-                    kps_list.append(max_kp)
-                    kps_scores_list.append(max_kp_score)
+                    kps_list.append(keypoints[np.where(index)[0][max_index]])
 
         frame.keypoints_ = kps_list
-        frame.kp_scores_ = kps_scores_list
 
     def drawKeypoints(self, frame):
         debug_img = gray2RGB(frame.image_.copy())
 
         for kp in frame.keypoints_:
+            np_kp = np.array(kp.pt).astype(int)
+
             cv2.circle(
-                debug_img, kp.astype(int), radius=2, color=(0, 255, 0), thickness=1
+                debug_img, np_kp, radius=2, color=(0, 255, 0), thickness=1
             )
 
-            strt = kp.astype(int) - 5
-            end = kp.astype(int) + 5
+            strt = np_kp - 5
+            end = np_kp + 5
 
             cv2.line(debug_img, strt, end, color=(0, 255, 0), thickness=2)
             cv2.line(
@@ -74,8 +71,8 @@ class FeatureDetector:
                 thickness=2,
             )
 
-        debug_bins(
-            debug_img, self.row_bins, self.col_bins, debug_img.shape[1], debug_img.shape[0], draw_output=True
+        debugBins(
+            debug_img, self.col_bins, self.row_bins, debug_img.shape[1], debug_img.shape[0], draw_output=True
         )
 
         return debug_img

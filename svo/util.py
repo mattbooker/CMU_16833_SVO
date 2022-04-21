@@ -6,7 +6,7 @@ def createBins(width, height, number_of_bins = 30):
     vertical_bins = np.linspace(start = 0, stop = height, num=number_of_bins, endpoint=True, dtype = 'int')
     return horizontal_bins, vertical_bins
 
-def load_image(path, ):
+def loadImage(path):
     return cv2.imread(path, 0)
 
 def gray2RGB(image):
@@ -15,7 +15,7 @@ def gray2RGB(image):
 def RGB2Gray(image):
     return cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
 
-def debug_bins(image, horizontal_bins, vertical_bins, width, height, draw_output = False, print_bins = False):
+def debugBins(image, horizontal_bins, vertical_bins, width, height, draw_output = False, print_bins = False):
     if print_bins:
         print(f'{horizontal_bins.shape=},{horizontal_bins=}')
         print(f'{vertical_bins.shape=}, {vertical_bins=}')
@@ -23,14 +23,14 @@ def debug_bins(image, horizontal_bins, vertical_bins, width, height, draw_output
     # Coordinates must be a tuple - (x,y)
     if draw_output:
         for hor in horizontal_bins:
-            cv2.line(image,(0, hor),(width, hor),(0,0,255),thickness=1) #Color is by default black
+            cv2.line(image,(hor, 0),(hor, height),(255,0,0),thickness=1) #Color is by default black
         for ver in vertical_bins:
-            cv2.line(image,(ver, 0),(ver, height),(255,0,0),thickness=1) #Color is by default black
+            cv2.line(image,(0, ver),(width, ver),(0,0,255),thickness=1) #Color is by default black
     
-def save_image(filename, img):
+def saveImage(filename, img):
     cv2.imwrite(filename, img)
 
-def pre_binning(row_bins, col_bins):
+def preBinning(row_bins, col_bins):
     bins = []
     for i_r in range(row_bins.shape[0] - 1):
         for i_c in range(col_bins.shape[0] - 1):
