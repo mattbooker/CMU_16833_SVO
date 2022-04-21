@@ -15,3 +15,6 @@ class Config:
         ITERATIONS = 30
         WINDOW_SIZE = 30
         PYRAMID_MAX_LEVEL = 4
+
+    class Map:
+        VAR_THRESH = 0.1
