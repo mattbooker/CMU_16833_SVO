@@ -33,19 +33,25 @@ class Camera:
         return image_pt
         
     # Back project pixel coordinates to a world point at given depth
-    def back_projection(self, transform, image_pt, depth):
+    def backProjection(self, image_pt, depth, transform):
         R = transform[:3, :3]
         t = transform[:, -1].reshape((3,1))
         homogeneous_image_pt = np.vstack([image_pt, 1])
 
         return depth * R.T @ np.linalg.inv(self.intrinsics) @ homogeneous_image_pt - R.T @ t
 
+    def getProjectionMatrix(self, transform_world_to_frame):
+        return self.intrinsics @ transform_world_to_frame
 
 
-from pathlib import Path
-b = Path(__name__).parent / "mav0/cam0/sensor.yaml"
+if __name__ == "__main__":
+    from pathlib import Path
+    b = Path(__name__).parent / "mav0/cam0/sensor.yaml"
 
-test = Camera(str(b))
-p = np.array([[367.215], [248.375]])
+    test = Camera(str(b))
+    p = np.array([[367.215], [248.375]])
+    transform = np.hstack([np.eye(3), np.zeros((3,1))])
 
-print(test.back_projection(p, 5.5))
+    print(test.backProjection(p, 5.5, transform))
+
+    print(test.getProjectionMatrix(transform))
