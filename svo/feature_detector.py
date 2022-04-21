@@ -23,8 +23,8 @@ class FeatureDetector:
         return kpts_np, kpts_scores
 
     def detectKeypoints(self, frame):
-        kps_list = []
-        kps_scores_list = []
+        opencv_kps_list = []
+        np_kps_list = []
 
         keypoints = self.fast.detect(frame.image_)
         np_kps, np_kps_scores = self.cvKeyPointsToNPArray(keypoints)
@@ -45,22 +45,24 @@ class FeatureDetector:
                 if np.any(index):
                     max_index = np.argmax(np_kps_scores[index])
 
-                    kps_list.append(keypoints[np.where(index)[0][max_index]])
+                    np_kps_list.append(np_kps[index][max_index])
 
-        frame.keypoints_ = kps_list
+                    opencv_kps_list.append(keypoints[np.where(index)[0][max_index]])
+
+        frame.opencv_keypoints_ = opencv_kps_list
+        frame.np_keypoints_ = np.array(np_kps_list, dtype = np.float32)
 
     def drawKeypoints(self, frame):
         debug_img = gray2RGB(frame.image_.copy())
 
-        for kp in frame.keypoints_:
-            np_kp = np.array(kp.pt).astype(int)
+        for kp in frame.np_keypoints_.astype(int):
 
             cv2.circle(
-                debug_img, np_kp, radius=2, color=(0, 255, 0), thickness=1
+                debug_img, kp, radius=2, color=(0, 255, 0), thickness=1
             )
 
-            strt = np_kp - 5
-            end = np_kp + 5
+            strt = kp - 5
+            end = kp + 5
 
             cv2.line(debug_img, strt, end, color=(0, 255, 0), thickness=2)
             cv2.line(
