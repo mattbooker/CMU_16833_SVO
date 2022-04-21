@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from util import createBins, load_image, debug_bins, gray2RGB, save_image
+from util import createBins, load_image, debug_bins, gray2RGB, save_image, RGB2Gray
 
 from frame import Frame
 from config import Config
@@ -38,16 +38,18 @@ class FeatureDetector:
                 start_col = self.col_bins[i_c]
                 end_col = self.col_bins[i_c + 1]
 
-                row_indexes = (np_kps[:, 0] >= start_row) & (np_kps[:, 0] < end_row)
-                col_indexes = (np_kps[:, 1] >= start_col) & (np_kps[:, 1] < end_col)
+                col_indexes = (np_kps[:, 0] >= start_col) & (np_kps[:, 0] < end_col)
+                row_indexes = (np_kps[:, 1] >= start_row) & (np_kps[:, 1] < end_row)
 
-                max_index = np.argmax(np_kps_scores[row_indexes & col_indexes])
+                index = row_indexes & col_indexes
+                if np.any(index):
+                    max_index = np.argmax(np_kps_scores[index])
 
-                max_kp = np_kps[row_indexes & col_indexes][max_index]
-                max_kp_score = np_kps_scores[row_indexes & col_indexes][max_index]
+                    max_kp = np_kps[row_indexes & col_indexes][max_index]
+                    max_kp_score = np_kps_scores[row_indexes & col_indexes][max_index]
 
-                kps_list.append(max_kp)
-                kps_scores_list.append(max_kp_score)
+                    kps_list.append(max_kp)
+                    kps_scores_list.append(max_kp_score)
 
         frame.keypoints_ = kps_list
         frame.kp_scores_ = kps_scores_list
@@ -73,22 +75,31 @@ class FeatureDetector:
             )
 
         debug_bins(
-            debug_img, self.col_bins, self.row_bins, width, height, draw_output=True
+            debug_img, self.row_bins, self.col_bins, debug_img.shape[1], debug_img.shape[0], draw_output=True
         )
 
         return debug_img
 
 
 if __name__ == "__main__":
-    image_path = "lena.jpg"
-    image = load_image(path=image_path)
-    width, height = image.shape
-    frame = Frame(image)
+    webcam = cv2.VideoCapture(0)
 
-    fd = FeatureDetector(width=width, height=height)
-    fd.detectKeypoints(frame)
-    debug_img = fd.drawKeypoints(frame)
+    if not webcam.read()[0]:
+        print("Webcam not found.")
+    else:
+        while True:
+            [_ ,image] = webcam.read()
+            height, width, channels = image.shape
 
-    cv2.imshow("features", debug_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+            gray_image = RGB2Gray(image)
+            frame = Frame(gray_image)
+
+            fd = FeatureDetector(width=width, height=height)
+            fd.detectKeypoints(frame)
+            debug_img = fd.drawKeypoints(frame)
+
+            cv2.imshow("features", debug_img)
+            ch = 0xFF & cv2.waitKey(1)
+            if ch == 27 or ch == ord('q'): # escape key or q
+                cv2.destroyAllWindows()
+                break
