@@ -9,3 +9,9 @@ class Config:
         BINS = 10
         NON_MAX_SUPPRESSION = True
         THRESHOLD = 5
+
+    class FeatureTracker:
+        EPSILON = 0.001
+        ITERATIONS = 30
+        WINDOW_SIZE = 30
+        PYRAMID_MAX_LEVEL = 4
