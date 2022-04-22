@@ -2,39 +2,43 @@ import numpy as np
 from filter import Filter
 from scipy.spatial.distance import cdist
 from config import Config
+from camera import Camera
+from pathlib import Path
+from matcher import Matcher
 
 class DepthFilter:
+
+    cam = Camera(str(Path(__name__).parent / "mav0/cam0/sensor.yaml"))
 
     def __init__(self):
         self.filters = []
 
-    def processFrame(self, frame, map, camera):
+    def processFrame(self, frame, map):
 
         if frame.is_keyframe_:
-            self.addKeyFrame(frame, map, camera)
+            self.addKeyFrame(frame, map)
 
         else: self.updateFilters(frame)
 
-    def addKeyFrame(self, frame, map, camera):
+    def addKeyFrame(self, frame, map):
         # For each NEW feature (i.e those not matched to map):
         #   create new filter
         n, _ = map.points.shape
-        P = camera.getProjectionMatrix(frame.T_w_f_) # 3x4
+        P = DepthFilter.cam.getProjectionMatrix(frame.T_w_f_) # 3x4
         x = np.hstack((map.points, np.ones((n, 1)))) # nx4
         u = (P @ x.T).T # nx3
-        u = u/u[:, -1] # normalize image points
-        u = u[:, :-1] # drop last column - nx2 - map points projected in current frame
+        u = u[:, :-1]/u[:, -1] # normalize image points - drop last column - nx2 - map points projected in current frame
 
         # Calc distances between all new feature points and projected map points.
         # Check if there is a feature close by - get the closest feature distance. If less than threshold, skip. Else, add a new filter
         min_dists = np.amin(cdist(frame.np_keypoints_, u, metric='euclidean'), axis=1)
         for idx, val in enumerate(min_dists):
             if val > Config.DepthFilter.DIST_THRESH: # feature not in map - no feature close by - create new filter
-                f = Filter(map.avg_scene_depth, np.amin(map.points[:, -1]), np.amax(map.points[:, -1]), frame.id, frame.np_keypoints_[idx, :])
+                f = Filter(map.avg_scene_depth, np.amin(map.points[:, -1]), np.amax(map.points[:, -1]), frame, frame.np_keypoints_[idx, :])
                 self.filters.append(f)
 
 
-    def updateFilters(self, frame):
+    def updateFilters(self, frame, map):
         # For each filter currently stored:
             # check if filter is too old (remove if too old)
             # check if filter is of a point that is visible in this frame (skip if not in frame)
@@ -44,4 +48,21 @@ class DepthFilter:
             #   
             #   If matched then compute tau and update filter
             # 
-        pass
+        
+        updated_filters = []
+        for f in self.filters:
+            if f.ref_keyframe.id >= map.keyframe_ids[0]: # only consider non-old filters
+                updated_filters.append(f)
+                
+                # check if filter is assoiated to the last added keyframe - if yes - check if point is visible in this frame
+                if f.ref_keyframe.id == map.keyframe_ids[-1]:
+                    x = DepthFilter.cam.backProjection(f.feature_point, f.mean, f.ref_keyframe.T_w_f_) # back project filter feature to world
+                    u = DepthFilter.cam.project(x, frame.T_w_f_) # project world point to current frame
+                    min_dist = np.amin(cdist(u.reshape(-1, 2), frame.np_keypoints_, metric='euclidean'))
+                    
+                    if min_dist <= Config.DepthFilter.DIST_THRESH: # point is visible in current frame
+                        m = Matcher(f.ref_keyframe, frame) # initialize matcher
+                        x2, y2, sad = m.searchEpipolarLine(f.feature_point, np.amin(map.points[:, -1]), np.amax(map.points[:, -1])) # search along the epipolar line
+                        
+        
+        self.filters = updated_filters # update filters
