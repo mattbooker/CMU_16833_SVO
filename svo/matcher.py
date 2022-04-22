@@ -1,3 +1,4 @@
+from difflib import Match
 import cv2
 import numpy as np
 from config import Config
@@ -98,6 +99,12 @@ class Matcher:
 
         return x2, y2, sad
 
+    def triangulate(self, ref_pts, cur_pts):
+        ref_P = Matcher.cam.getProjectionMatrix(self.ref_frame.T_w_f_[:-1])
+        cur_P = Matcher.cam.getProjectionMatrix(self.cur_frame.T_w_f_[:-1])
+
+        return cv2.triangulatePoints(ref_P, cur_P, ref_pts.T, cur_pts.T)
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from frame import Frame
@@ -142,3 +149,14 @@ if __name__ == "__main__":
     matcher = Matcher(a, b)
 
     matcher.searchEpipolarLine(a.np_keypoints_[9], 2, 4)
+    f = matcher.triangulate(a.np_keypoints_, b.np_keypoints_)
+    f /= f[-1, :]
+
+    plt.imshow(im1)
+    plt.plot(a.np_keypoints_[:, 0], a.np_keypoints_[:, 1], "ro")
+    plt.show()
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot3D(f[0, :], f[1, :], f[2, :], 'rx')
+    plt.show()
