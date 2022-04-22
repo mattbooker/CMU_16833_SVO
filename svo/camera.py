@@ -24,8 +24,17 @@ class Camera:
         # self.P = self.intrinsics @ self.extrinsics
 
     # Project world point into image to get pixel coordinates
-    def project(self, transform, world_pt):
-        homogeneous_world_pt = np.vstack([world_pt, 1])
+    def project(self, world_pt, transform):
+        '''
+        Transform: (4,4) np.array
+            transform from world to camera frame
+        world_pt: (3,) np.array
+            3D point in world
+        '''
+
+        homogeneous_world_pt = np.vstack([world_pt.reshape((3,1)), 1])
+
+        transform = transform[:-1]
 
         homogeneous_image_pt = self.intrinsics @ transform @ homogeneous_world_pt
         image_pt = homogeneous_image_pt[:-1] / homogeneous_image_pt[-1]
@@ -34,9 +43,19 @@ class Camera:
         
     # Back project pixel coordinates to a world point at given depth
     def backProjection(self, image_pt, depth, transform):
+        '''
+        image_pt: (2,) np.array
+            point in image coordinates
+        depth: float
+            Depth to scale ray up by
+        transform: (4,4) np.array
+            transform from world to camera frame
+        '''
+
         R = transform[:3, :3]
-        t = transform[:, -1].reshape((3,1))
-        homogeneous_image_pt = np.vstack([image_pt, 1])
+        t = transform[:3, -1].reshape((3,1))
+
+        homogeneous_image_pt = np.vstack([image_pt.reshape((2,1)), 1])
 
         return depth * R.T @ np.linalg.inv(self.intrinsics) @ homogeneous_image_pt - R.T @ t
 
