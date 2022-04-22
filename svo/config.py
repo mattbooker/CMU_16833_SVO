@@ -18,3 +18,6 @@ class Config:
 
     class Map:
         VAR_THRESH = 0.1
+
+    class DepthFilter:
+        DIST_THRESH = 0.1
