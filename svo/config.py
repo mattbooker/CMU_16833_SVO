@@ -1,9 +1,9 @@
 class Config:
-    patch_size = 8
-    half_patch_size = 4
+    PATCH_SIZE = 8
+    HALF_PATCH_SIZE = 4
     
     class Matcher:
-        window_size = 15
+        WINDOW_SIZE = 9
 
     class FeatureDetector:
         BINS = 10
