@@ -3,7 +3,7 @@ from scipy.stats import norm
 
 class Filter:
 
-    def __init__(self, mean, min, max, id):
+    def __init__(self, mean, min, max, id, ftr_pt):
         self.mean = 1/mean
         self.min = 1/min
         self.max = 1/max
@@ -11,7 +11,7 @@ class Filter:
         self.a = 10
         self.b = 10
         self.ref_keyframe = id # keyframe id that the filter is associated to
-        self.feature_point = np.zeros((1, 2)) # image point in the keyframe that the filter is associated to
+        self.feature_point = ftr_pt # image point in the keyframe that the filter is associated to
 
     def update(self, estimated_depth, tau_sq):
 
