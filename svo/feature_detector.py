@@ -38,8 +38,8 @@ class FeatureDetector:
                 start_col = self.col_bins[i_c]
                 end_col = self.col_bins[i_c + 1]
 
-                col_indexes = (np_kps[:, 0] >= start_col) & (np_kps[:, 0] < end_col)
-                row_indexes = (np_kps[:, 1] >= start_row) & (np_kps[:, 1] < end_row)
+                col_indexes = (np_kps[:, 0] >= start_col + Config.FeatureDetector.BORDER_THREHOLD) & (np_kps[:, 0] < end_col - Config.FeatureDetector.BORDER_THREHOLD)
+                row_indexes = (np_kps[:, 1] >= start_row + Config.FeatureDetector.BORDER_THREHOLD) & (np_kps[:, 1] < end_row - Config.FeatureDetector.BORDER_THREHOLD)
 
                 index = row_indexes & col_indexes
                 if np.any(index):
