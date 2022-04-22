@@ -12,6 +12,7 @@ class DepthFilter:
 
     def __init__(self):
         self.filters = []
+        self.px_error_angle = np.arctan(1/(2*DepthFilter.cam.intrinsics[0, 0])*2)
 
     def processFrame(self, frame, map):
 
@@ -52,8 +53,6 @@ class DepthFilter:
         updated_filters = []
         for f in self.filters:
             if f.ref_keyframe.id >= map.keyframe_ids[0]: # only consider non-old filters
-                updated_filters.append(f)
-                
                 # check if filter is assoiated to the last added keyframe - if yes - check if point is visible in this frame
                 if f.ref_keyframe.id == map.keyframe_ids[-1]:
                     x = DepthFilter.cam.backProjection(f.feature_point, f.mean, f.ref_keyframe.T_w_f_) # back project filter feature to world
@@ -64,5 +63,24 @@ class DepthFilter:
                         m = Matcher(f.ref_keyframe, frame) # initialize matcher
                         x2, y2, sad = m.searchEpipolarLine(f.feature_point, np.amin(map.points[:, -1]), np.amax(map.points[:, -1])) # search along the epipolar line
                         
+                        # Triangulate to get estimated depth. Update the filter
+                        # TODO: check x2, y2 ordering
+                        triangulated_point = m.triangulate(f.feature_point.reshape(-1, 2), np.array([[x2, y2]]))
+
+                        triangulated_point = triangulated_point[:-1]/triangulated_point[-1]
+
+                        estimated_depth = triangulated_point[-1]
+
+                        # TODO: update tau squared before update
+
+                        f.update(estimated_depth, _)
+
+                        # TODO: check if variance is low enough - if yes, add filter point to map, remove from list
+
+                updated_filters.append(f) # append filter to updated list
+                        
         
         self.filters = updated_filters # update filters
+    
+    def calcTau(self, transform, f, z):
+        pass
