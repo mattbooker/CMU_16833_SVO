@@ -30,4 +30,7 @@ class Map:
             frame.is_keyframe_ = True
             # remove farthest keyframe, and add new keyframe to map list of keyframes 
             del self.keyframes[max_index]
-            self.keyframes.append(frame)
+            self.addKeyframe(frame)
+    
+    def addKeyframe(self, frame):
+        self.keyframes.append(frame)
