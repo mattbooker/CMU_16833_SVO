@@ -101,7 +101,10 @@ class Matcher:
         ref_P = Matcher.cam.getProjectionMatrix(self.ref_frame.T_w_f_[:-1])
         cur_P = Matcher.cam.getProjectionMatrix(self.cur_frame.T_w_f_[:-1])
 
-        return cv2.triangulatePoints(ref_P, cur_P, ref_pts.T, cur_pts.T)
+        triangulated_points = cv2.triangulatePoints(ref_P, cur_P, ref_pts.T, cur_pts.T)
+        triangulated_points = triangulated_points[:-1]/triangulated_points[-1]
+
+        return triangulated_points
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
