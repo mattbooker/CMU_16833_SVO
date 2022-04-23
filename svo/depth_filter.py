@@ -57,7 +57,7 @@ class DepthFilter:
         for filter in self.filters:
             converged = False
             # If filters keyframe is older than oldest keyframe then ignore
-            if filter.ref_keyframe.id < map.keyframe_ids[0]:
+            if filter.ref_keyframe.id < map.keyframes[0].id:
                 # Continue, don't add to updated filter list
                 continue
 
@@ -70,7 +70,7 @@ class DepthFilter:
                 filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
 
             # check if filter is assoiated to the last added keyframe
-            if filter.ref_keyframe.id == map.keyframe_ids[-1] and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
+            if filter.ref_keyframe.id == map.keyframes[-1].id and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
                 image_coords = DepthFilter.cam.project(world_pt, frame.T_w_f_)
                 min_dist = np.amin(
                     cdist(image_coords.reshape(-1, 2), frame.np_keypoints_, metric='euclidean'))
