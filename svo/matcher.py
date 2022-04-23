@@ -151,7 +151,6 @@ if __name__ == "__main__":
 
     matcher.searchEpipolarLine(a.np_keypoints_[9], 2, 4)
     f = matcher.triangulate(a.np_keypoints_, b.np_keypoints_)
-    f /= f[-1, :]
 
     plt.imshow(im1)
     plt.plot(a.np_keypoints_[:, 0], a.np_keypoints_[:, 1], "ro")

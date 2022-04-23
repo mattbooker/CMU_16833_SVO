@@ -87,7 +87,7 @@ class DepthFilter:
                     x2, y2, sad = m.searchEpipolarLine(
                         filter.feature_point, min_depth, max_depth)
                     
-                    estimated_depth = m.triangulate(filter.feature_point, np.array([x2, y2]))
+                    estimated_depth = m.triangulate(filter.feature_point, np.array([x2, y2]))[-1]
 
                     tau_sq = self.computeTauSq(filter.ref_keyframe, frame, world_pt)
 
