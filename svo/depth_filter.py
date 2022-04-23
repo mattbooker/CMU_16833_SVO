@@ -52,6 +52,7 @@ class DepthFilter:
         
         updated_filters = []
         for f in self.filters:
+            converged = False
             if f.ref_keyframe.id >= map.keyframe_ids[0]: # only consider non-old filters
                 # check if filter is assoiated to the last added keyframe - if yes - check if point is visible in this frame
                 if f.ref_keyframe.id == map.keyframe_ids[-1]:
@@ -71,16 +72,31 @@ class DepthFilter:
 
                         estimated_depth = triangulated_point[-1]
 
-                        # TODO: update tau squared before update
+                        # TODO: What is f
+                        tau = self.calcTau(f.ref_keyframe.T_w_f_, _, estimated_depth)
 
-                        f.update(estimated_depth, _)
+                        f.update(estimated_depth, tau**2)
 
-                        # TODO: check if variance is low enough - if yes, add filter point to map, remove from list
+                        # check if variance is low enough - if yes, add filter point to map, remove from list
+                        if f.mean <= Config.Map.VAR_THRESH:
+                            new_map_point = DepthFilter.cam.backProjection(f.feature_point, f.mean, f.ref_keyframe.T_w_f_)
+                            map.points = np.vstack((map.points, new_map_point.reshape(-1, 3)))
+                            converged = True
 
-                updated_filters.append(f) # append filter to updated list
+                if not converged:
+                    updated_filters.append(f) # append filter to updated list
                         
         
         self.filters = updated_filters # update filters
     
     def calcTau(self, transform, f, z):
-        pass
+        t = transform[:, 1]
+        a = f*z - t
+        t_norm = np.linalg.norm(t)
+        a_norm = np.linalg.norm(a)
+        alpha = np.arccos(np.dot(f, t)/t_norm)
+        beta = np.arccos(np.dot(a, -t)/(t_norm*a_norm))
+        beta_plus = beta + self.px_error_angle
+        gamma_plus = np.pi - alpha - beta_plus
+        z_plus = t_norm*(np.sin(beta_plus)/np.sin(gamma_plus))
+        return z_plus - z
