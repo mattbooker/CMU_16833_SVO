@@ -9,6 +9,7 @@ class Config:
         BINS = 10
         NON_MAX_SUPPRESSION = True
         THRESHOLD = 5
+        BORDER_THREHOLD = 8
 
     class FeatureTracker:
         EPSILON = 0.001
