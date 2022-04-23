@@ -55,28 +55,22 @@ class DepthFilter:
 
         updated_filters = []
         for filter in self.filters:
-
+            converged = False
             # If filters keyframe is older than oldest keyframe then ignore
             if filter.ref_keyframe.id < map.keyframe_ids[0]:
-                # TODO: Should remove the filter
+                # Continue, don't add to updated filter list
                 continue
 
             # Check if point is behind camera
             point_in_cur_frame = DepthFilter.cam.backProjection(
                 filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_ @ np.inv(frame.T_f_w_))
-            if point_in_cur_frame[3] < 0:
-                continue
 
             # Check if the point is outside camera view
             world_pt = DepthFilter.cam.backProjection(
-                filter.feature_point, filter.mean, filter.ref_keyframe.T_w_f_)
-            if not DepthFilter.cam.isInFrame(frame, world_pt):
-                continue
-
-            updated_filters.append(filter)
+                filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
 
             # check if filter is assoiated to the last added keyframe
-            if filter.ref_keyframe.id == map.keyframe_ids[-1]:
+            if filter.ref_keyframe.id == map.keyframe_ids[-1] and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
                 image_coords = DepthFilter.cam.project(world_pt, frame.T_w_f_)
                 min_dist = np.amin(
                     cdist(image_coords.reshape(-1, 2), frame.np_keypoints_, metric='euclidean'))
@@ -98,6 +92,15 @@ class DepthFilter:
                     tau_sq = self.computeTauSq(filter.ref_keyframe, frame, world_pt)
 
                     filter.update(estimated_depth, tau_sq)
+
+                    # check if variance is low enough - if yes, add filter point to map, remove from list
+                    if filter.getVariance() <= Config.Map.VAR_THRESH:
+                        new_map_point = DepthFilter.cam.backProjection(filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
+                        map.points = np.vstack((map.points, new_map_point.reshape(-1, 3)))
+                        converged = True
+
+            if not converged:
+                updated_filters.append(filter) # append filter to updated list
 
         self.filters = updated_filters  # update filters
 

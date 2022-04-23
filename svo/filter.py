@@ -44,3 +44,7 @@ class Filter:
     def getStdDev(self):
         # Inverse since filter works in inverse depth coords
         return 1 / np.sqrt(self.variance)
+    
+    def getVariance(self):
+        # Inverse since filter works in inverse depth coordinates
+        return 1/self.variance
