@@ -97,6 +97,8 @@ class DepthFilter:
                     if filter.getVariance() <= Config.Map.VAR_THRESH:
                         new_map_point = DepthFilter.cam.backProjection(filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
                         map.points = np.vstack((map.points, new_map_point.reshape(-1, 3)))
+                        # Update map average scene depth
+                        map.avg_scene_depth = np.mean(map.points[:, -1])
                         converged = True
 
             if not converged:
