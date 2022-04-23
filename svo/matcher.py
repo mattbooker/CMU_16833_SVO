@@ -1,12 +1,10 @@
-from difflib import Match
 import cv2
 import numpy as np
 from config import Config
 from camera import Camera
-from pathlib import Path
 
 class Matcher:
-    cam = Camera(str(Path(__name__).parent / "mav0/cam0/sensor.yaml"))
+    cam = Camera()
 
     def __init__(self, ref_frame, cur_frame):
         self.ref_frame = ref_frame

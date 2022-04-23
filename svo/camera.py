@@ -1,27 +1,11 @@
-import yaml
 import numpy as np
+from config import Config
 
 class Camera:
     
-    def __init__(self, filename):
-
-        with open(filename) as file:
-            self.data = yaml.safe_load(file)
-
-        ext_rows = self.data['T_BS']['rows']
-        ext_cols = self.data['T_BS']['cols']
-
-        # Reshape and drop the last row
-        # self.extrinsics = np.array(self.data['T_BS']['data']).reshape((ext_cols, ext_rows))[:-1,:]
-        # self.extrinsics = np.hstack([np.eye(3), np.zeros((3,1))])
-
-        # self.R = self.extrinsics[:3, :3]
-        # self.t = self.extrinsics[:, -1].reshape((3,1))
+    def __init__(self):
         
-        self.intrinsics = np.eye(3)
-        self.intrinsics[[0, 1, 0, 1], [0, 1, 2, 2]] = np.array(self.data['intrinsics'])
-        
-        # self.P = self.intrinsics @ self.extrinsics
+        self.intrinsics = Config.Camera.INTRINSICS
 
     # Project world point into image to get pixel coordinates
     def project(self, world_pt, transform):
@@ -60,17 +44,44 @@ class Camera:
         return depth * R.T @ np.linalg.inv(self.intrinsics) @ homogeneous_image_pt - R.T @ t
 
     def getProjectionMatrix(self, transform_world_to_frame):
-        return self.intrinsics @ transform_world_to_frame
+        '''
+        transform: (4,4) np.array
+            transform from world to camera frame
+        '''
+
+        return self.intrinsics @ transform_world_to_frame[:3, :]
+
+    def isInFrame(self, frame, world_pt):
+        h_pt = np.vstack([world_pt.reshape(3,1), 1])
+
+        P = self.getProjectionMatrix(frame.T_w_f_)
+        h_image_coords = P @ h_pt
+        image_coords = (h_image_coords / h_image_coords[-1])[:-1]
+
+        print(image_coords)
+
+        x, y = image_coords
+
+        if 0 <= x < frame.image_.shape[1] and 0 <= y < frame.image_.shape[0]:
+            return True
+
+        return False
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    b = Path(__name__).parent / "mav0/cam0/sensor.yaml"
-
-    test = Camera(str(b))
-    p = np.array([[367.215], [248.375]])
+    cam = Camera()
+    cam.intrinsics = np.array([[200, 0, 320], 
+                                [0, 200, 240], 
+                                [0, 0, 1]])
+    p = np.array([[320], [240]])
     transform = np.hstack([np.eye(3), np.zeros((3,1))])
 
-    print(test.backProjection(p, 5.5, transform))
+    print(cam.backProjection(p, 5.5, transform))
 
-    print(test.getProjectionMatrix(transform))
+    print(cam.getProjectionMatrix(transform))
+
+    from frame import Frame
+    test_frame = Frame(np.zeros([600, 400]))
+
+    test_pt1 = np.array([1, 1, 10]).reshape(3,1)
+    print(cam.isInFrame(test_frame, test_pt1))

@@ -1,3 +1,5 @@
+import numpy as np
+
 class Config:
     PATCH_SIZE = 8
     HALF_PATCH_SIZE = 4
@@ -22,3 +24,6 @@ class Config:
 
     class DepthFilter:
         DIST_THRESH = 0.1
+
+    class Camera:
+        INTRINSICS = np.eye(3)

@@ -36,3 +36,11 @@ class Filter:
         self.variance = new_variance
         self.a = (eq_26-eq_25)/(eq_25-eq_26/eq_25)
         self.b = self.a*(1. - eq_25)/eq_25
+
+    def getDepth(self):
+        # Inverse since filter works in inverse depth coords
+        return 1/self.mean
+
+    def getStdDev(self):
+        # Inverse since filter works in inverse depth coords
+        return 1 / np.sqrt(self.variance)
