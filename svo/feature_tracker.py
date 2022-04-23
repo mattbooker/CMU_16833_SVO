@@ -71,6 +71,9 @@ if __name__ == "__main__":
 
             ft.trackFeatures(initial_frame, current_frame)
 
+            print(current_frame.np_keypoints_.shape)
+            print()
+
             debug_img = ft.drawTrackedFeature(initial_frame, current_frame, fd)
 
             cv2.imshow("tracked_features", debug_img)
