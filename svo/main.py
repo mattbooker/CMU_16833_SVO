@@ -64,7 +64,7 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
     # cur_inliers = cur_frame.np_keypoints_[status]
 
     for n, R,t  in zip(range(num), Rs, Ts):
-        ext = np.hstack((R.T, -R.T @ t))
+        ext = np.hstack((R,t))
         cur_P = cam.getProjectionMatrix(ext)
         
         world_pts = cv2.triangulatePoints(prev_P, cur_P, prev_frame.np_keypoints_.T, cur_frame.np_keypoints_.T)
@@ -77,7 +77,7 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
         final_t = t
         final_world_pts = world_pts
 
-    T = np.vstack([np.hstack([final_R.T, -final_R @ final_t]), [0,0,0,1]])
+    T = np.vstack([np.hstack([final_R, final_t]), [0,0,0,1]])
     cur_frame.T_w_f_ = T
 
     map.initial_map(final_world_pts)
@@ -106,24 +106,27 @@ def processFrame(prev_frame: Frame, cur_frame: Frame):
     final_t = None
     
     # TODO: Scale map
-    # status = status.ravel() != 0
-    # prev_inliers = prev_frame.np_keypoints_[status]
-    # cur_inliers = cur_frame.np_keypoints_[status]
+
+    status = status.ravel() != 0
+    prev_inliers = prev_frame.np_keypoints_[status]
+    cur_inliers = cur_frame.np_keypoints_[status]
 
     for n, R,t  in zip(range(num), Rs, Ts):
-        ext = np.hstack((R.T, -R.T @ t))
+        ext = np.hstack((R, t))
         cur_P = cam.getProjectionMatrix(ext)
         
-        world_pts = cv2.triangulatePoints(prev_P, cur_P, prev_frame.np_keypoints_.T, cur_frame.np_keypoints_.T)
+        world_pts = cv2.triangulatePoints(prev_P, cur_P, prev_inliers.T, cur_inliers.T)
         world_pts = (world_pts[:-1]/world_pts[-1]).T
 
         if np.any(world_pts[:, -1] < 0):
+
             continue
 
         final_R = R
         final_t = t
 
-    T = np.vstack([np.hstack([final_R.T, -final_R @ final_t]), [0,0,0,1]])
+    final_t = final_t.reshape(3,1)
+    T = np.vstack([np.hstack([final_R, final_t]), [0,0,0,1]])
     cur_frame.T_w_f_ = T
 
     map.checkKeyframe(cur_frame)
@@ -133,6 +136,8 @@ def processFrame(prev_frame: Frame, cur_frame: Frame):
         fd.detectKeypoints(cur_frame)
 
     depth_filter.processFrame(cur_frame)
+
+    print(T[:-1, -1])
 
     return True
 
@@ -195,20 +200,25 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
 
 
         # cv2.imshow("op", current_frame.image_)
-        debug_img = fd.drawKeypoints(current_frame)
-        if last_frame is not None and not current_frame.is_keyframe_:
-            cv2.imshow("a", ft.drawTrackedFeature(last_frame, current_frame, fd))
-        else:
-            cv2.imshow("a", debug_img)
-        cv2.waitKey(0)
+        # debug_img = fd.drawKeypoints(current_frame)
+        # if last_frame is not None and not current_frame.is_keyframe_:
+        #     cv2.imshow("a", ft.drawTrackedFeature(last_frame, current_frame, fd))
+        # else:
+        #     cv2.imshow("a", debug_img)
+        # cv2.waitKey(0)
 
         cum_t += current_frame.T_w_f_[:-1, -1]
         ax.plot3D(cum_t[0], cum_t[1], cum_t[2], "rx")
-        plt.pause(0.1)
+        ax.set_ylim([-5, 5])
+        ax.set_xlim([0, -20])
+        ax.set_zlim([-10, 10])
+        # plt.pause(0.1)
 
         last_frame = current_frame
 
+    plt.show()
     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     run()

@@ -6,7 +6,6 @@ class Frame:
     def __init__(self, image):
         self.id = Frame.frame_number
         self.image_ = image
-        self.opencv_keypoints_ = None
         self.np_keypoints_ = None
         self.is_keyframe_ = False
 

@@ -58,7 +58,7 @@ class FeatureDetector:
 
                     opencv_kps_list.append(keypoints[np.where(index)[0][max_index]])
 
-        frame.opencv_keypoints_ = opencv_kps_list
+        # frame.opencv_keypoints_ = opencv_kps_list
         frame.np_keypoints_ = np.array(np_kps_list, dtype = np.float32)
 
     def drawKeypoints(self, frame):

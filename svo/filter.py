@@ -19,7 +19,7 @@ class Filter:
         m = s_sq * ((self.mean / self.variance) + (estimated_depth/tau_sq))
         C1 = (self.a / (self.a + self.b)) * norm.pdf(estimated_depth, self.mean, np.sqrt(self.variance + tau_sq))
         C2 = (self.b / (self.a + self.b)) * 1/(self.min)
-
+        
         # normalization = C1 + C2
         # C1 /= normalization
         # C2 /= normalization

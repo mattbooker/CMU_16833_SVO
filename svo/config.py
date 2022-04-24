@@ -13,10 +13,10 @@ class Config:
         WINDOW_SIZE = 9
 
     class FeatureDetector:
-        BINS = 30
+        BINS = 10
         NON_MAX_SUPPRESSION = True
         THRESHOLD = 30
-        BORDER_THREHOLD = 8
+        BORDER_THREHOLD = 10
 
     class FeatureTracker:
         EPSILON = 0.001
@@ -25,13 +25,14 @@ class Config:
         PYRAMID_MAX_LEVEL = 4
 
     class Map:
-        VAR_THRESH = 0.1
+        VAR_THRESH = 10
         MAX_KEYFRAMES = 10
-        KEYFRAME_THRESH = 0.06
+        KEYFRAME_THRESH = 0.12
+        MIN_KEYPOINTS = 50
 
 
     class DepthFilter:
-        DIST_THRESH = 0.1
+        DIST_THRESH = 10.0
 
     class Camera:
         # INTRINSICS = np.eye(3)

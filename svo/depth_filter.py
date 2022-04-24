@@ -83,25 +83,32 @@ class DepthFilter:
                     m = Matcher(filter.ref_keyframe, frame)
 
                     # We use 2 std dev away from mean to get min and max depths
-                    min_depth = filter.getDepth() - 2*filter.getStdDev()
+                    min_depth = max(0, filter.getDepth() - 2*filter.getStdDev())
                     max_depth = filter.getDepth() + 2*filter.getStdDev()
 
                     # Search along the epipolar line to find best corresponding point
                     x2, y2, sad = m.searchEpipolarLine(
                         filter.feature_point, min_depth, max_depth)
-                    
+
+                    if sad == -1:
+                        continue
+
                     estimated_depth = m.triangulate(filter.feature_point, np.array([x2, y2]))[-1]
 
                     tau_sq = self.computeTauSq(filter.ref_keyframe, frame, world_pt)
 
+                    # print("var1", filter.variance)
                     filter.update(estimated_depth, tau_sq)
+                    # print("var2", filter.variance)
+                    # print(filter.getVariance())
+
 
                     # check if variance is low enough - if yes, add filter point to map, remove from list
                     if filter.getVariance() <= Config.Map.VAR_THRESH:
                         new_map_point = DepthFilter.cam.backProjection(filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
                         self.map.points = np.vstack((self.map.points, new_map_point.reshape(-1, 3)))
                         # Update map average scene depth
-                        self.map.avg_scene_depth = np.mean(self.map.points[:, -1])
+                        self.map.avg_scene_depth = np.median(self.map.points[:, -1])
                         converged = True
 
                         print(f'New point added = {new_map_point}')
@@ -118,14 +125,15 @@ class DepthFilter:
         for derivation.
         '''
 
-        T_ref_cur = ref_frame.T_w_f_ @ np.inv(cur_frame.T_f_w_)
-        t = T_ref_cur[:, -1]
-        a = world_pt - t
-        f = (world_pt / world_pt[-1])
+        T_ref_cur = ref_frame.T_w_f_ @ np.linalg.inv(cur_frame.T_w_f_)
+        t = T_ref_cur[:-1, -1]
+        a = world_pt.flatten() - t.flatten()
+        f = (world_pt / world_pt[-1]).flatten()
 
         # Use fx as focal length
         focal_length = DepthFilter.cam.intrinsics[0,0]
 
+        print(f.dot(a), np.linalg.norm(t))
         alpha = np.arccos(f.dot(a) / np.linalg.norm(t))
         beta = np.arccos(-a.dot(t)) / (np.linalg.norm(a) * np.linalg.norm(t))
         beta_plus = beta + 2 * np.arctan(1/(2 * focal_length))

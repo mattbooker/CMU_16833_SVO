@@ -11,7 +11,7 @@ class Map:
     def initial_map(self, world_pts):
         self.points = world_pts
 
-        self.avg_scene_depth = np.mean(self.points[:, -1])
+        self.avg_scene_depth = np.median(self.points[:, -1])
 
     def checkKeyframe(self, frame):
         total_dist = 0
@@ -28,7 +28,7 @@ class Map:
         
         avg_dist = total_dist/len(self.keyframes)
 
-        if avg_dist > Config.Map.KEYFRAME_THRESH * self.avg_scene_depth:
+        if avg_dist > Config.Map.KEYFRAME_THRESH * self.avg_scene_depth or frame.np_keypoints_.shape[0] < Config.Map.MIN_KEYPOINTS:
             # frame is a keyframe
             frame.is_keyframe_ = True
             # remove farthest keyframe, and add new keyframe to map list of keyframes

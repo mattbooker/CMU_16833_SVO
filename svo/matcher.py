@@ -2,15 +2,20 @@ import cv2
 import numpy as np
 from config import Config
 from camera import Camera
+from copy import deepcopy
+from feature_tracker import FeatureTracker
 
 class Matcher:
     cam = Camera()
 
     def __init__(self, ref_frame, cur_frame):
-        self.ref_frame = ref_frame
-        self.cur_frame = cur_frame
-        
-        self.F, _ = cv2.findFundamentalMat(ref_frame.np_keypoints_, cur_frame.np_keypoints_)
+        self.ref_frame = deepcopy(ref_frame)
+        self.cur_frame = deepcopy(cur_frame)
+
+        ft = FeatureTracker()
+        ft.trackFeatures(self.ref_frame, self.cur_frame)
+
+        self.F, _ = cv2.findFundamentalMat(self.ref_frame.np_keypoints_, self.cur_frame.np_keypoints_)
 
 
     def searchEpipolarLine(self, ref_feature, min_depth, max_depth):
@@ -63,20 +68,21 @@ class Matcher:
             get_minor_coord = lambda y: (-l_prime[1] * y - l_prime[2]) / l_prime[0]
 
         min_val = float("inf")
-        x2, y2 = -1, -1
-
+        x2, y2, sad = -1, -1, -1
+        
         # TODO: Optimization - step through by some step length?
         # TODO: Optimization - calculate where upper/lower bound goes off image rather than skipping
         start = int(lower_bound.flatten()[major_axis])
         stop = int(upper_bound.flatten()[major_axis])
+
         for major in range(start, stop):
             minor = get_minor_coord(major)
             minor = int(np.round(minor))
 
-            if  major < offset or major > im1.shape[major_axis] - offset:
+            if major < offset + 1 or major > im1.shape[major_axis] - offset - 1:
                 continue
             
-            if minor < offset or minor > im1.shape[minor_axis] - offset:
+            if minor < offset + 1 or minor > im1.shape[minor_axis] - offset - 1:
                 continue
 
             if major == 0:
