@@ -173,6 +173,7 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
 
     fig = plt.figure()
     ax = plt.axes(projection='3d')
+    f = open("predicted_path.txt", "a")
 
     cum_t = np.zeros((3,))
 
@@ -208,6 +209,13 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
         # cv2.waitKey(0)
 
         cum_t += current_frame.T_w_f_[:-1, -1]
+
+        #save output to file to compare with the groundtruth
+        file_name = str(filename)[str(filename).rfind("/") + 1 : ].replace("_0.png","")
+        fileString = file_name + " " + str(cum_t[0]) + " " + str(cum_t[1]) + \
+                        " " + str(cum_t[2]) + "\n"
+        f.write(fileString)
+
         ax.plot3D(cum_t[0], cum_t[1], cum_t[2], "rx")
         ax.set_ylim([-5, 5])
         ax.set_xlim([0, -20])
@@ -215,6 +223,8 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
         # plt.pause(0.1)
 
         last_frame = current_frame
+
+    f.close()
 
     plt.savefig("plot.png")
     plt.show()
