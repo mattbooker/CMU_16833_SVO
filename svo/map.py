@@ -7,9 +7,10 @@ class Map:
         self.avg_scene_depth = 0 # current scene depth
         self.keyframes = [] # stored keyframes - total 10 (based on paper)
     
-    def initial_map(self):
-        # triangulate initial map from first two views
-        pass
+    def initial_map(self, world_pts):
+        self.points = world_pts
+
+        self.avg_scene_depth = np.mean(self.points[:, -1])
 
     def checkKeyframe(self, frame):
         total_dist = 0
@@ -30,7 +31,7 @@ class Map:
             frame.is_keyframe_ = True
             # remove farthest keyframe, and add new keyframe to map list of keyframes 
             del self.keyframes[max_index]
-            self.addKeyframe(frame)
+            self.addKeyFrame(frame)
     
-    def addKeyframe(self, frame):
+    def addKeyFrame(self, frame):
         self.keyframes.append(frame)

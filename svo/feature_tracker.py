@@ -43,7 +43,7 @@ class FeatureTracker:
             prev_frame.np_keypoints_.astype(int),
             current_frame.np_keypoints_.astype(int),
         ):
-            cv2.line(debug_img, (x0, y0), (x1, y1), (0, 128, 0))
+            cv2.line(debug_img, (x0, y0), (x1, y1), (0, 255, 0))
         return debug_img
 
 

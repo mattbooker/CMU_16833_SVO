@@ -14,3 +14,6 @@ class Frame:
         self.T_w_f_ = np.eye(4)
 
         Frame.frame_number += 1
+
+    def setKeyFrame(self):
+        self.is_keyframe = True

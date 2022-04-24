@@ -11,8 +11,9 @@ class DepthFilter:
 
     cam = Camera()
 
-    def __init__(self):
+    def __init__(self, map):
         self.filters = []
+        self.map = map
 
     def processFrame(self, frame, map):
 
@@ -22,27 +23,30 @@ class DepthFilter:
         else:
             self.updateFilters(frame)
 
-    def addKeyFrame(self, frame, map):
+    def addKeyFrame(self, frame):
         # For each NEW feature (i.e those not matched to map):
         #   create new filter
-        n, _ = map.points.shape
+        n, _ = self.map.points.shape
         P = DepthFilter.cam.getProjectionMatrix(frame.T_w_f_)  # 3x4
-        x = np.hstack((map.points, np.ones((n, 1))))  # nx4
-        u = (P @ x.T).T  # nx3
+
+        h_map_pts = np.hstack((self.map.points, np.ones((n, 1))))  # nx4
+        image_coords = (P @ h_map_pts.T).T  # nx3
+
+        print(image_coords.shape)
         # normalize image points - drop last column - nx2 - map points projected in current frame
-        u = u[:, :-1]/u[:, -1]
+        image_coords = image_coords[:, :-1]/image_coords[:, -1].reshape(-1,1)
 
         # Calc distances between all new feature points and projected map points.
         # Check if there is a feature close by - get the closest feature distance. If less than threshold, skip. Else, add a new filter
-        min_dists = np.amin(cdist(frame.np_keypoints_, u,
-                            metric='euclidean'), axis=1)
+        min_dists = np.amin(cdist(frame.np_keypoints_, image_coords, metric='euclidean'), axis=1)
+        
         for idx, val in enumerate(min_dists):
             if val > Config.DepthFilter.DIST_THRESH:  # feature not in map - no feature close by - create new filter
-                f = Filter(map.avg_scene_depth, np.amin(
-                    map.points[:, -1]), np.amax(map.points[:, -1]), frame, frame.np_keypoints_[idx, :])
+                f = Filter(self.map.avg_scene_depth, np.amin(
+                    self.map.points[:, -1]), np.amax(self.map.points[:, -1]), frame, frame.np_keypoints_[idx, :])
                 self.filters.append(f)
 
-    def updateFilters(self, frame, map):
+    def updateFilters(self, frame):
         # For each filter currently stored:
         # check if filter is too old (remove if too old)
         # check if filter is of a point that is visible in this frame (skip if not in frame)
@@ -57,7 +61,7 @@ class DepthFilter:
         for filter in self.filters:
             converged = False
             # If filters keyframe is older than oldest keyframe then ignore
-            if filter.ref_keyframe.id < map.keyframes[0].id:
+            if filter.ref_keyframe.id < self.map.keyframes[0].id:
                 # Continue, don't add to updated filter list
                 continue
 
@@ -70,7 +74,7 @@ class DepthFilter:
                 filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
 
             # check if filter is assoiated to the last added keyframe
-            if filter.ref_keyframe.id == map.keyframes[-1].id and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
+            if filter.ref_keyframe.id == self.map.keyframes[-1].id and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
                 image_coords = DepthFilter.cam.project(world_pt, frame.T_w_f_)
                 min_dist = np.amin(
                     cdist(image_coords.reshape(-1, 2), frame.np_keypoints_, metric='euclidean'))
@@ -96,9 +100,9 @@ class DepthFilter:
                     # check if variance is low enough - if yes, add filter point to map, remove from list
                     if filter.getVariance() <= Config.Map.VAR_THRESH:
                         new_map_point = DepthFilter.cam.backProjection(filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
-                        map.points = np.vstack((map.points, new_map_point.reshape(-1, 3)))
+                        self.map.points = np.vstack((self.map.points, new_map_point.reshape(-1, 3)))
                         # Update map average scene depth
-                        map.avg_scene_depth = np.mean(map.points[:, -1])
+                        self.map.avg_scene_depth = np.mean(self.map.points[:, -1])
                         converged = True
 
             if not converged:
