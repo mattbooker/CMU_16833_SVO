@@ -1,6 +1,6 @@
 import numpy as np 
-import cv2
 from scipy.interpolate import RectBivariateSpline
+from config import Config
 
 class ImageAlignment:
     def __init__(self):
@@ -9,77 +9,117 @@ class ImageAlignment:
         self.maxIter = 100
         self.windowSize = 4
 
-    def findAlignment(self, previous_frame, current_frame, threshold = self.threshold, maxIters = self.maxIter):
-        #given previous and current frame features, calculate transform
-        # previous frame features : 2 x N
-        # current frame features  : 2 x M
+    def LucasKanadeAffine(self, It, It1, rect, M, thresh=.025, maxIt=100):
+        '''
+        Lucas-Kanade Forward Additive Alignment with Affine MAtrix
+        
+        Inputs: 
+            It: template image
+            It1: Current image
+            rect: Current position of the object
+            (top left, bottom right coordinates, x1, y1, x2, y2)
+            thresh: Stop condition when dp is too small
+            maxIt: Maximum number of iterations to run
+            
+        Outputs:
+            M: Affine mtarix (2x3)
+        '''
+        # Set thresholds (you probably want to play around with the values)
+        M = np.zeros((2,3))
+        threshold = thresh
+        maxIters = maxIt
+        i = 0
+        x1, y1, x2, y2 = rect
+        
+        # ----- TODO -----
+        # YOUR CODE HERE
+        M = M
+        x_spline = np.arange(0, It.shape[1])
+        y_spline = np.arange(0, It.shape[0])
+
+        #get gradients along x and y (to optimise run time)
+        img_y, img_x = np.gradient(It1)
+
+        #get complete images in the form of splines (to avoid indexing errors)
+        interp_it = RectBivariateSpline(y_spline, x_spline, It)
+        interp_it1 = RectBivariateSpline(y_spline, x_spline, It1)
+        interp_it1_y = RectBivariateSpline(y_spline, x_spline, img_y)
+        interp_it1_x = RectBivariateSpline(y_spline, x_spline, img_x)
+
+        #define matrix for original template without movement 
+        x_img_range = np.arange(0, It.shape[1])
+        y_img_range = np.arange(0, It.shape[0])
+        x_img, y_img = np.meshgrid(x_img_range, y_img_range)
+        #t_img = interp_it.ev(y_img, x_img)
+        x_img = x_img.flatten()
+        y_img = y_img.flatten()
+        i = 0
+        while (i <= maxIters):       
+            #define window around rect
+            x_temp_range = np.arange(x1 , x2 + 0.5)
+            y_temp_range = np.arange(y1 , y2 + 0.5)
+            x_temp, y_temp = np.meshgrid(x_temp_range, y_temp_range)
+
+            #take affine transform of x and y 
+            one = np.ones((x_temp.shape))
+            pts = np.vstack((x_temp.flatten(), y_temp.flatten(), one.flatten())).reshape(3,-1)
+            pts_new = M@pts
+
+            xs = pts_new[0].reshape(x_temp.shape)
+            ys = pts_new[1].reshape(x_temp.shape)
+
+            error_img = interp_it.ev(y_temp, x_temp) - interp_it1.ev(ys, xs)   
+
+            dx = interp_it1.ev(ys, xs, dy = 1).reshape((-1, 1))
+            dy = interp_it1.ev(ys, xs, dx = 1).reshape((-1, 1))
+            
+            xs = xs.flatten().reshape((-1, 1))
+            ys = ys.flatten().reshape((-1, 1))
+
+            A = np.hstack((xs*dx, ys*dx, dx, xs*dy, ys*dy, dy))
+            B = error_img.flatten().reshape(-1,1)
+
+            del_m = np.linalg.lstsq(A, B, rcond = None)[0].reshape(2,3)
+            M = M + del_m
+            if np.linalg.norm(del_m) < thresh :
+                print(i)
+                break
+            i += 1
+        return M
+    
+    def findAlignment(self, previous_frame, current_frame, threshold=Config.ImageAlignment.THRESHOLD, maxIters=Config.ImageAlignment.MAX_ITER):
 
         M = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-        thresh = threshold
-        iters = maxIters
-        
-        #   find all matching features -> NOT REQUIRED. ASSUMING THAT ALL KEYPOINTS ARE 
-        #   ORDERED AND THEN TAKING THE TOP N FEATURES (N = min(prev_frame_feat, curr_frame_feat))
-
-        if (previous_frame.np_features_.shape[0] != current_frame.np_features_.shape[0]):
-            num_features = np.min(previous_frame.np_features_.shape[0], previous_frame.np_features_.shape[0])
-            previous_frame.np_features_ = previous_frame[num_features,:]
-            current_frame.np_features_ = current_frame[num_features,:]
-
-        ySpline = np.arange(0, previous_frame.image.shape[0])
-        xSpline = np.arange(0, previous_frame.image.shape[1])
-        current_frame_y_grad, current_frame_x_grad = np.gradient(current_frame.image)
-
-        inter_prev_frame = RectBivariateSpline(ySpline, xSpline, previous_frame.image)
-        inter_curr_frame = RectBivariateSpline(ySpline, xSpline, current_frame.image)
-        inter_curr_frame_y = RectBivariateSpline(ySpline, xSpline, current_frame_y_grad)
-        inter_curr_frame_x = RectBivariateSpline(ySpline, xSpline, current_frame_x_grad)     
-
-        A = np.zeros((previous_frame.np_features_.shape[0], self.windowSize*self.windowSize))
-        b = np.zeros((previous_frame.np_features_.shape[0], self.windowSize*self.windowSize))
-
-        for i in range(maxIters):
+        for i in range(previous_frame.np_keypoints_.shape[0]):
             
-            for j in range(previous_frame.np_features_.shape[0]):
-                #get sub windows from first frame and warp 
-                x0, y0 = previous_frame.np_keypoints_[j].astype(int)          
-                x0_temp_range = np.arange(x0 - self.windowSize//2, x0 + self.windowSize//2)
-                y0_temp_range = np.arange(y0 - self.windowSize//2, y0 + self.windowSize//2)
+            x0, y0 = previous_frame.np_keypoints_[i].astype(int)
 
-                warped_points = M@np.array([x0_temp_range, y0_temp_range, np.ones((x0.shape[0]))])
-                x0_warped, y0_warped = warped_points[0,:], warped_points[1,:]
+            rect = [x0 - Config.ImageAlignment.WINDOW_SIZE
+                    //2, y0 - Config.ImageAlignment.WINDOW_SIZE
+                    //2, x0 + Config.ImageAlignment.WINDOW_SIZE
+                    //2, y0 + Config.ImageAlignment.WINDOW_SIZE
+                    //2]
 
-                x0_temp, y0_temp = np.meshgrid(x0_warped, y0_warped)
-
-                #get sub windows from second frame
-                x1, y1 = current_frame.np_keypoints_[j].astype(int)
-                x1_temp_range = np.arange(x1 - self.windowSize//2, x1 + self.windowSize//2)
-                y1_temp_range = np.arange(y1 - self.windowSize//2, y1 + self.windowSize//2)
-                x1_temp, y1_temp = np.meshgrid(x1_temp_range, y1_temp_range)
-                
-                #evaluate frames at points
-                previous_frame_subimg = inter_prev_frame.ev(y0_temp, x0_temp).reshape((-1,1))
-                current_frame_subimg = inter_curr_frame.ev(y1_temp, x1_temp).reshape((-1,1))
-                dx = inter_curr_frame_x.ev(y0_warped, x0_warped, dy = 1).reshape((-1, 1))
-                dy = inter_curr_frame_y.ev(y0_warped, x0_warped, dx = 1).reshape((-1, 1))
-                
-                intensity_res = (previous_frame_subimg - current_frame_subimg).flatten().reshape(-1, 1)
-
-                jaccobian = np.hstack((x0_warped*dx, y0_warped*dx, dx, x0_warped*dy, y0_warped*dy, dy))
-                A[j] = jaccobian
-                b[j] = intensity_res
-
-            del_m = np.linalg.lstsq(A, b, rcond = None)[0].reshape(2,3)
-            M = M + del_m
-            self.Transform = M
-            
-            if np.linalg.norm(del_m) < self.thresh:
-                break
+            M = self.LucasKanadeAffine(current_frame.image_, previous_frame.image_, rect, M, threshold, maxIters)
         
-        self.Transform = np.vstack((self.Transform, np.array([0,0,1])))
-        return self.Transform
+        print(f'M : {M.shape}')
+        print(f'previous : {previous_frame.np_keypoints_.shape}')
     
-    def getRotTrans(self):
+        homogenized_keypts = np.vstack([previous_frame.np_keypoints_[:,0],previous_frame.np_keypoints_[:,1],np.ones(previous_frame.np_keypoints_.shape[0])]).T.copy() 
+        warped_keypoints = M@homogenized_keypts.T
+        warped_keypoints /= warped_keypoints[-1]
+
+        print(f'homo : {homogenized_keypts.shape}')
+        print(f'warped keypoints norm : {warped_keypoints}')
+        
+        warped_keypoints = warped_keypoints[:,:2]
+        print(f'warped keypoints top 2 : {warped_keypoints.shape}')
+
+        current_frame.np_keypoints_ = warped_keypoints
+
+        return M
+
+    def getRotTrans(self, H):
         # returns rotation and translation matrix
         '''
         K is the camera calibration matrix
