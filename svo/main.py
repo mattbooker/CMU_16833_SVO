@@ -196,15 +196,15 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
 
         # cv2.imshow("op", current_frame.image_)
         debug_img = fd.drawKeypoints(current_frame)
-        if last_frame is not None:
+        if last_frame is not None and not current_frame.is_keyframe_:
             cv2.imshow("a", ft.drawTrackedFeature(last_frame, current_frame, fd))
         else:
             cv2.imshow("a", debug_img)
-        cv2.waitKey(1)
+        cv2.waitKey(0)
 
         cum_t += current_frame.T_w_f_[:-1, -1]
         ax.plot3D(cum_t[0], cum_t[1], cum_t[2], "rx")
-        plt.pause(1)
+        plt.pause(0.1)
 
         last_frame = current_frame
 

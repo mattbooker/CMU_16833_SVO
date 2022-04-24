@@ -15,7 +15,7 @@ class Config:
     class FeatureDetector:
         BINS = 30
         NON_MAX_SUPPRESSION = True
-        THRESHOLD = 25
+        THRESHOLD = 30
         BORDER_THREHOLD = 8
 
     class FeatureTracker:
@@ -27,6 +27,8 @@ class Config:
     class Map:
         VAR_THRESH = 0.1
         MAX_KEYFRAMES = 10
+        KEYFRAME_THRESH = 0.06
+
 
     class DepthFilter:
         DIST_THRESH = 0.1

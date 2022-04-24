@@ -20,20 +20,19 @@ class Map:
             # Calculate distance between the frame and the keyframe
             T_frame = keyframe.T_w_f_ @ np.linalg.inv(frame.T_w_f_)
             dist = np.linalg.norm(T_frame[:-1, -1])
-            print(dist)
+            # print(dist)
             if dist > max_dist:
                 max_dist = dist
                 max_index = idx
             total_dist += dist
         
         avg_dist = total_dist/len(self.keyframes)
-        # print(avg_dist, 0.12 * self.avg_scene_depth)
 
-        if avg_dist > 0.12 * self.avg_scene_depth:
+        if avg_dist > Config.Map.KEYFRAME_THRESH * self.avg_scene_depth:
             # frame is a keyframe
             frame.is_keyframe_ = True
             # remove farthest keyframe, and add new keyframe to map list of keyframes
-            if len(self.keyframes) >= Config.MAX_KEYFRAMES:
+            if len(self.keyframes) >= Config.Map.MAX_KEYFRAMES:
                 del self.keyframes[max_index]
             self.addKeyFrame(frame)
     
