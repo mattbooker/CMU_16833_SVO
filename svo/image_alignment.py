@@ -10,23 +10,23 @@ class ImageAlignment:
     def __init__(self):
         self.Transform = None
 
-    def findAlignment(self, previous_frame, current_frame, threshold=Config.ImageAlignment.THRESHOLD, maxIters=Config.ImageAlignment.MAX_ITER):
+    def findAlignment(self, previous_frame, current_frame):
         # given previous and current frame features, calculate transform
         # previous frame features : 2 x N
         # current frame features  : 2 x M
 
         M = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-        thresh = threshold
-        iters = maxIters
+        threshold = Config.ImageAlignment.THRESHOLD
+        maxIters = Config.ImageAlignment.MAX_ITER
 
         #   find all matching features -> NOT REQUIRED. ASSUMING THAT ALL KEYPOINTS ARE
         #   ORDERED AND THEN TAKING THE TOP N FEATURES (N = min(prev_frame_feat, curr_frame_feat))
 
-        if (previous_frame.np_features_.shape[0] != current_frame.np_features_.shape[0]):
+        if (previous_frame.np_keypoints_.shape[0] != current_frame.np_keypoints_.shape[0]):
             num_features = np.min(
-                previous_frame.np_features_.shape[0], previous_frame.np_features_.shape[0])
-            previous_frame.np_features_ = previous_frame[num_features, :]
-            current_frame.np_features_ = current_frame[num_features, :]
+                previous_frame.np_keypoints_.shape[0], previous_frame.np_keypoints_.shape[0])
+            previous_frame.np_keypoints_ = previous_frame[num_features, :]
+            current_frame.np_keypoints_ = current_frame[num_features, :]
 
         ySpline = np.arange(0, previous_frame.image.shape[0])
         xSpline = np.arange(0, previous_frame.image.shape[1])
@@ -93,7 +93,7 @@ class ImageAlignment:
             M = M + del_m
             self.Transform = M
 
-            if np.linalg.norm(del_m) < self.thresh:
+            if np.linalg.norm(del_m) < threshold:
                 break
 
         self.Transform = np.vstack((self.Transform, np.array([0, 0, 1])))

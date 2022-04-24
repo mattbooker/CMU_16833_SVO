@@ -15,10 +15,10 @@ class DepthFilter:
         self.filters = []
         self.map = map
 
-    def processFrame(self, frame, map):
+    def processFrame(self, frame):
 
         if frame.is_keyframe_:
-            self.addKeyFrame(frame, map)
+            self.addKeyFrame(frame)
 
         else:
             self.updateFilters(frame)
@@ -31,8 +31,7 @@ class DepthFilter:
 
         h_map_pts = np.hstack((self.map.points, np.ones((n, 1))))  # nx4
         image_coords = (P @ h_map_pts.T).T  # nx3
-
-        print(image_coords.shape)
+        
         # normalize image points - drop last column - nx2 - map points projected in current frame
         image_coords = image_coords[:, :-1]/image_coords[:, -1].reshape(-1,1)
 
@@ -67,14 +66,14 @@ class DepthFilter:
 
             # Check if point is behind camera
             point_in_cur_frame = DepthFilter.cam.backProjection(
-                filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_ @ np.inv(frame.T_f_w_))
+                filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_ @ np.linalg.inv(frame.T_w_f_))
 
             # Check if the point is outside camera view
             world_pt = DepthFilter.cam.backProjection(
                 filter.feature_point, filter.getDepth(), filter.ref_keyframe.T_w_f_)
 
             # check if filter is assoiated to the last added keyframe
-            if filter.ref_keyframe.id == self.map.keyframes[-1].id and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[3] >= 0:
+            if filter.ref_keyframe.id == self.map.keyframes[-1].id and DepthFilter.cam.isInFrame(frame, world_pt) and point_in_cur_frame[2] >= 0:
                 image_coords = DepthFilter.cam.project(world_pt, frame.T_w_f_)
                 min_dist = np.amin(
                     cdist(image_coords.reshape(-1, 2), frame.np_keypoints_, metric='euclidean'))
@@ -104,6 +103,8 @@ class DepthFilter:
                         # Update map average scene depth
                         self.map.avg_scene_depth = np.mean(self.map.points[:, -1])
                         converged = True
+
+                        print(f'New point added = {new_map_point}')
 
             if not converged:
                 updated_filters.append(filter) # append filter to updated list

@@ -16,4 +16,4 @@ class Frame:
         Frame.frame_number += 1
 
     def setKeyFrame(self):
-        self.is_keyframe = True
+        self.is_keyframe_ = True

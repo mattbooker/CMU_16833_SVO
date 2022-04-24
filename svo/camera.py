@@ -58,8 +58,6 @@ class Camera:
         h_image_coords = P @ h_pt
         image_coords = (h_image_coords / h_image_coords[-1])[:-1]
 
-        print(image_coords)
-
         x, y = image_coords
 
         if 0 <= x < frame.image_.shape[1] and 0 <= y < frame.image_.shape[0]:

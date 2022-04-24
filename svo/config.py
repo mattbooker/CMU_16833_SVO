@@ -26,6 +26,7 @@ class Config:
 
     class Map:
         VAR_THRESH = 0.1
+        MAX_KEYFRAMES = 10
 
     class DepthFilter:
         DIST_THRESH = 0.1

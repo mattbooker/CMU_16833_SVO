@@ -48,10 +48,8 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
 
     ft.trackFeatures(prev_frame, cur_frame)
 
-    # TODO: Use homography to compute transform
     H, status = cv2.findHomography(prev_frame.np_keypoints_, cur_frame.np_keypoints_, cv2.RANSAC, Config.REPROJECTION_THRESHOLD)
     num, Rs, Ts, Ns  = cv2.decomposeHomographyMat(H, cam.intrinsics)
-
 
     I = np.hstack([np.eye(3), np.zeros((3,1))])
     prev_P = cam.getProjectionMatrix(I)
@@ -73,7 +71,6 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
         world_pts = (world_pts[:-1]/world_pts[-1]).T
 
         if np.any(world_pts[:, -1] < 0):
-            print(n)
             continue
 
         final_R = R
@@ -94,13 +91,71 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
 def processFrame(prev_frame: Frame, cur_frame: Frame):
     print("Processing Frame...")
 
+    ft.trackFeatures(prev_frame, cur_frame)
+
     cur_frame.T_w_f_ = prev_frame.T_w_f_
 
     # T = image_aligner.findAlignment(prev_frame, cur_frame)
+    H, status = cv2.findHomography(prev_frame.np_keypoints_, cur_frame.np_keypoints_, cv2.RANSAC, Config.REPROJECTION_THRESHOLD)
+    num, Rs, Ts, Ns  = cv2.decomposeHomographyMat(H, cam.intrinsics)
 
+    I = np.hstack([np.eye(3), np.zeros((3,1))])
+    prev_P = cam.getProjectionMatrix(I)
+
+    final_R = None
+    final_t = None
     
+    # TODO: Scale map
+    # status = status.ravel() != 0
+    # prev_inliers = prev_frame.np_keypoints_[status]
+    # cur_inliers = cur_frame.np_keypoints_[status]
+
+    for n, R,t  in zip(range(num), Rs, Ts):
+        ext = np.hstack((R.T, -R.T @ t))
+        cur_P = cam.getProjectionMatrix(ext)
+        
+        world_pts = cv2.triangulatePoints(prev_P, cur_P, prev_frame.np_keypoints_.T, cur_frame.np_keypoints_.T)
+        world_pts = (world_pts[:-1]/world_pts[-1]).T
+
+        if np.any(world_pts[:, -1] < 0):
+            continue
+
+        final_R = R
+        final_t = t
+
+    T = np.vstack([np.hstack([final_R.T, -final_R @ final_t]), [0,0,0,1]])
+    cur_frame.T_w_f_ = T
+
+    map.checkKeyframe(cur_frame)
+
+    if cur_frame.is_keyframe_:
+        print("New keyframe")
+        fd.detectKeypoints(cur_frame)
+
+    depth_filter.processFrame(cur_frame)
 
     return True
+
+def decomposeHomography(H):
+    norm = np.sqrt(np.power(H[0,0],2) + np.power(H[1,1], 2) + np.power(H[2,2],2))
+    norm_H = H / norm
+
+    c1 = norm_H[:, 0]
+    c2 = norm_H[:, 1]
+    c3 = np.cross(c1, c2)
+    
+    t = norm_H[:, 2]
+    R = np.zeros((3,3))
+    R[0] = np.array([c1[0], c2[0], c3[0]])
+    R[1] = np.array([c1[1], c2[1], c3[1]])
+    R[2] = np.array([c1[2], c2[2], c3[2]])
+
+    U, S, Vh = np.linalg.svd(R)
+
+    R = U @ Vh
+
+    return R, t
+
 
 def run(current_stage = Stage.PROCESS_FIRST_FRAME):
     cur_dir = Path(__file__)
@@ -108,6 +163,13 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
     
     last_frame = None
     current_frame = None
+
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+
+    cum_t = np.zeros((3,))
 
     for filename in sorted(data_dir.glob("*")):
         img = cv2.imread(str(filename), 0)
@@ -138,7 +200,11 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
             cv2.imshow("a", ft.drawTrackedFeature(last_frame, current_frame, fd))
         else:
             cv2.imshow("a", debug_img)
-        cv2.waitKey(0)
+        cv2.waitKey(1)
+
+        cum_t += current_frame.T_w_f_[:-1, -1]
+        ax.plot3D(cum_t[0], cum_t[1], cum_t[2], "rx")
+        plt.pause(1)
 
         last_frame = current_frame
 
