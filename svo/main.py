@@ -84,22 +84,26 @@ def processSecondFrame(prev_frame:Frame, cur_frame: Frame):
     cur_frame.T_w_f_ = T
 
     map.initial_map(final_world_pts)
-    
+
     cur_frame.setKeyFrame()
     map.addKeyFrame(cur_frame)
     depth_filter.addKeyFrame(cur_frame)
 
     return True
 
-def processFrame(cur_frame: Frame):
+def processFrame(prev_frame: Frame, cur_frame: Frame):
     print("Processing Frame...")
 
-    # Manage keyframes
+    cur_frame.T_w_f_ = prev_frame.T_w_f_
+
+    # T = image_aligner.findAlignment(prev_frame, cur_frame)
+
+    
 
     return True
 
 def run(current_stage = Stage.PROCESS_FIRST_FRAME):
-    cur_dir = Path(__name__)
+    cur_dir = Path(__file__)
     data_dir = cur_dir.parent / "data"
     
     last_frame = None
@@ -124,7 +128,7 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
                 current_stage = Stage.PROCESS_FRAMES
 
         elif current_stage == Stage.PROCESS_FRAMES:
-            if processFrame(current_frame):
+            if processFrame(last_frame, current_frame):
                 pass
 
 
