@@ -104,7 +104,7 @@ def processFrame(prev_frame: Frame, cur_frame: Frame):
 
 def run(current_stage = Stage.PROCESS_FIRST_FRAME):
     cur_dir = Path(__file__)
-    data_dir = cur_dir.parent / "data"
+    data_dir = cur_dir.parent.parent / "data"
     
     last_frame = None
     current_frame = None
