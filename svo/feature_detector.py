@@ -41,6 +41,15 @@ class FeatureDetector:
                 col_indexes = (np_kps[:, 0] >= start_col + Config.FeatureDetector.BORDER_THREHOLD) & (np_kps[:, 0] < end_col - Config.FeatureDetector.BORDER_THREHOLD)
                 row_indexes = (np_kps[:, 1] >= start_row + Config.FeatureDetector.BORDER_THREHOLD) & (np_kps[:, 1] < end_row - Config.FeatureDetector.BORDER_THREHOLD)
 
+                if frame.np_keypoints_ is not None:
+                    old_col_indexes = (frame.np_keypoints_[:, 0] >= start_col + Config.FeatureDetector.BORDER_THREHOLD) & (frame.np_keypoints_[:, 0] < end_col - Config.FeatureDetector.BORDER_THREHOLD)
+                    old_row_indexes = (frame.np_keypoints_[:, 1] >= start_row + Config.FeatureDetector.BORDER_THREHOLD) & (frame.np_keypoints_[:, 1] < end_row - Config.FeatureDetector.BORDER_THREHOLD)
+
+                    old_index = old_col_indexes & old_row_indexes
+                    if np.any(old_index):
+                        np_kps_list.append(frame.np_keypoints_[old_index][0].astype(int))
+                        continue
+
                 index = row_indexes & col_indexes
                 if np.any(index):
                     max_index = np.argmax(np_kps_scores[index])
