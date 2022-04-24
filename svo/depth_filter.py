@@ -133,8 +133,8 @@ class DepthFilter:
         # Use fx as focal length
         focal_length = DepthFilter.cam.intrinsics[0,0]
 
-        print(f.dot(a), np.linalg.norm(t))
-        alpha = np.arccos(f.dot(a) / np.linalg.norm(t))
+        # print(f.dot(a), np.linalg.norm(t))
+        alpha = np.arccos(f.dot(t) / (np.linalg.norm(f) * np.linalg.norm(t)))
         beta = np.arccos(-a.dot(t)) / (np.linalg.norm(a) * np.linalg.norm(t))
         beta_plus = beta + 2 * np.arctan(1/(2 * focal_length))
         gamma = np.pi - alpha - beta_plus

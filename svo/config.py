@@ -25,7 +25,7 @@ class Config:
         PYRAMID_MAX_LEVEL = 4
 
     class Map:
-        VAR_THRESH = 10
+        VAR_THRESH = 7.5
         MAX_KEYFRAMES = 10
         KEYFRAME_THRESH = 0.12
         MIN_KEYPOINTS = 50
