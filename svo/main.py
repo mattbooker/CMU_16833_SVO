@@ -216,6 +216,7 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
 
         last_frame = current_frame
 
+    plt.savefig("plot.png")
     plt.show()
     cv2.destroyAllWindows()
 
