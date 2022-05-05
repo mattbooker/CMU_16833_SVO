@@ -12,7 +12,15 @@ from map import Map
 from image_alignment import ImageAlignment
 from camera import Camera
 
-data_dir = "../data/"
+import argparse
+import os
+import time 
+
+parser = argparse.ArgumentParser(description="Run SVO on dataset")
+parser.add_argument("--dataset", help="Path to dataset images")
+args = parser.parse_args()
+
+data_dir = "../data/airsim/"
 
 ft = FeatureTracker()
 fd = None
@@ -163,8 +171,8 @@ def decomposeHomography(H):
 
 
 def run(current_stage = Stage.PROCESS_FIRST_FRAME):
-    cur_dir = Path(__file__)
-    data_dir = cur_dir.parent.parent / "data"
+    # cur_dir = Path(__file__)
+    data_dir = args.dataset
     
     last_frame = None
     current_frame = None
@@ -177,8 +185,10 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
 
     cum_t = np.zeros((3,))
 
-    for filename in sorted(data_dir.glob("*")):
-        img = cv2.imread(str(filename), 0)
+    proc_time = []
+
+    for filename in sorted(os.listdir(data_dir)):
+        img = cv2.imread(data_dir + str(filename), 0)
 
         global fd
 
@@ -188,17 +198,26 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
         current_frame = Frame(img)
 
         if current_stage == Stage.PROCESS_FIRST_FRAME:
+            t1 = time.time()
             if processFirstFrame(current_frame):
                 current_stage = Stage.PROCESS_SECOND_FRAME
+            t2 = time.time()
+            proc_time.append(t2 - t1)
 
         elif current_stage == Stage.PROCESS_SECOND_FRAME:
+            t1 = time.time()
             if processSecondFrame(last_frame, current_frame):
                 current_stage = Stage.PROCESS_FRAMES
+            t2 = time.time()
+            proc_time.append(t2 - t1)
+
 
         elif current_stage == Stage.PROCESS_FRAMES:
+            t1 = time.time()
             if processFrame(last_frame, current_frame):
                 pass
-
+            t2 = time.time()
+            proc_time.append(t2 - t1)
 
         # cv2.imshow("op", current_frame.image_)
         # debug_img = fd.drawKeypoints(current_frame)
@@ -225,6 +244,8 @@ def run(current_stage = Stage.PROCESS_FIRST_FRAME):
         last_frame = current_frame
 
     f.close()
+
+    print(f"Average Time : {sum(proc_time)/len(os.listdir(data_dir))}, Max time : {max(proc_time)}, Min time : {min(proc_time)}")
 
     plt.savefig("plot.png")
     plt.show()
